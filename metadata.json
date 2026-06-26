@@ -1,0 +1,6 @@
+{
+  "name": "Text Task Dashboard",
+  "description": "Text Task Dashboard featuring ResQ, an intelligent action generator that turns chaotic brain dumps into pre-built, one-tap executable actions (emails, calendar blocks, payments, messages) with scheduled notification delivery.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
