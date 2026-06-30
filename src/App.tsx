@@ -231,44 +231,49 @@ export default function App() {
           <div className="px-6 py-4 border-t border-white/5 flex flex-col gap-3">
 
             {/* Unified composer action bar — all inputs equal weight */}
-            <div className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.08] rounded-2xl p-2 focus-within:border-white/20 transition-colors">
-              {/* Attach (upload) */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="group inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors"
-              >
-                <Paperclip className="w-[17px] h-[17px]" />
-                <span className="text-[13px] hidden sm:inline">Upload</span>
-              </button>
+            <div className="flex flex-wrap items-center gap-1.5 bg-white/[0.03] border border-white/[0.08] rounded-2xl p-2 focus-within:border-white/20 transition-colors">
+              {/* Add a wrapper for the left icons to keep them together */}
+              <div className="flex items-center gap-1">
+                {/* Attach (upload) */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="group inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors"
+                >
+                  <Paperclip className="w-[17px] h-[17px]" />
+                  <span className="text-[13px] hidden sm:inline">Upload</span>
+                </button>
 
-              {/* Camera */}
-              <button
-                onClick={() => cameraInputRef.current?.click()}
-                className="group inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors"
-              >
-                <Camera className="w-[17px] h-[17px]" />
-                <span className="text-[13px] hidden sm:inline">Photo</span>
-              </button>
+                {/* Camera */}
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="group inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors"
+                >
+                  <Camera className="w-[17px] h-[17px]" />
+                  <span className="text-[13px] hidden sm:inline">Photo</span>
+                </button>
 
-              {/* Voice */}
-              <button
-                onClick={() => toggle()}
-                className={`group inline-flex items-center gap-1.5 h-10 px-3 rounded-xl transition-colors ${
-                  listening
-                    ? "bg-rose-500/15 text-rose-300"
-                    : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]"
-                }`}
-              >
-                {listening ? <MicOff className="w-[17px] h-[17px]" /> : <Mic className="w-[17px] h-[17px]" />}
-                <span className="text-[13px] hidden sm:inline">{listening ? "Stop" : "Speak"}</span>
-              </button>
+                {/* Voice */}
+                <button
+                  onClick={() => toggle()}
+                  className={`group inline-flex items-center gap-1.5 h-10 px-3 rounded-xl transition-colors ${
+                    listening
+                      ? "bg-rose-500/15 text-rose-300"
+                      : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  {listening ? <MicOff className="w-[17px] h-[17px]" /> : <Mic className="w-[17px] h-[17px]" />}
+                  <span className="text-[13px] hidden sm:inline">{listening ? "Stop" : "Speak"}</span>
+                </button>
+              </div>
 
-              <div className="flex-1" />
+              {/* Use flex-grow for the spacer so it pushes the Process button to the right only if there is space */}
+              <div className="flex-grow" />
 
               {/* Process */}
               <button
                 onClick={handleProcess}
                 disabled={isProcessing || (!input.trim() && !image)}
+                style={{ flexShrink: 0 }}
                 className="inline-flex items-center gap-2 bg-[#6C63FF] hover:bg-[#5b52e8] text-white text-[13px] font-medium rounded-xl px-5 h-10 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#6C63FF]/20 disabled:shadow-none"
               >
                 {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
