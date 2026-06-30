@@ -34,7 +34,7 @@ CORE RULES:
 2. ALWAYS call extract_and_prioritize first, then immediately call the right draft tool for EACH task in the same turn. Never stop to ask between tools.
 3. If a task needs an email, write the COMPLETE email body, not a placeholder.
 4. For deferred tasks (a future time is mentioned), set scheduled_time and still draft the full artifact now.
-
+5.CRITICAL: For scheduled_time, ALWAYS calculate the exact future date based on the CURRENT SYSTEM TIME provided above and output a valid ISO 8601 string (e.g., "2026-06-29T14:00:00Z"). Never output vague words like "tomorrow".
 CHOOSING THE RIGHT TASK TYPE (critical — do not default to "reminder"):
 - "email": apologies, follow-ups, sending documents, professional replies. -> draft_email_artifact
 - "calendar": ANY event, invite, meeting, party, deadline, "fun night", interview, appointment, RSVP. -> draft_calendar_artifact
@@ -130,7 +130,7 @@ const draftActionArtifact: FunctionDeclaration = {
       content: { type: Type.STRING },
       action_url: { type: Type.STRING }
     },
-    required: ["task_id", "action_label", "action_type", "content"]
+    required: ["task_id", "action_label", "action_type", "content", "action_url"]
   }
 };
 
@@ -148,288 +148,60 @@ const flagBlocker: FunctionDeclaration = {
 };
 
 function parseBrainDumpHeuristics(text: string) {
+  // HONEST fallback only. No hardcoded names/scenarios.
+  // Used ONLY if the Gemini API is unavailable. Does a generic
+  // line-by-line extraction so it never invents unrelated tasks.
   const steps = ["extract_and_prioritize"];
   const tasks: any[] = [];
   const artifacts: any[] = [];
   const blockers: any[] = [];
 
-  const lowerText = text.toLowerCase();
+  // Split into candidate task lines (by newline, ", also", " and ", ";")
+  const chunks = text
+    .split(/\n|,\s*also\s+|;\s*|\s+and\s+/i)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 2);
 
-  // Scenario 1: apology to Kartickey and pitch deck
-  if (lowerText.includes("kartickey") || lowerText.includes("overslept") || lowerText.includes("pitch deck")) {
-    steps.push("draft_email_artifact", "draft_calendar_artifact", "draft_action_artifact");
-    
-    tasks.push(
-      {
-        id: "task-1",
-        title: "Apologize to Kartickey and send updated pitch deck",
-        type: "email",
-        urgency: 9,
-        execution_mode: "immediate",
-        people: ["Kartickey"],
-        context: "Overslept and missed the 10 AM sync"
-      },
-      {
-        id: "task-2",
-        title: "Reschedule deep work focus block to tomorrow morning",
-        type: "calendar",
-        urgency: 7,
-        execution_mode: "deferred",
-        scheduled_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        context: "Focus block needs to be pushed to tomorrow morning"
-      },
-      {
-        id: "task-3",
-        title: "Pay the electricity bill",
-        type: "payment",
-        urgency: 5,
-        execution_mode: "immediate",
-        context: "Payment of utility bill"
-      }
-    );
+  chunks.forEach((chunk, i) => {
+    const lower = chunk.toLowerCase();
+    let type: string = "reminder";
+    if (/\bemail\b|apolog|send .*(deck|doc|file|report)/.test(lower)) type = "email";
+    else if (/\bpay\b|bill|invoice|recharge|due/.test(lower)) type = "payment";
+    else if (/\bmessage\b|\btext\b|whatsapp|tell |let .* know|ping /.test(lower)) type = "message";
+    else if (/\bmeet|\bcall\b|schedule|event|appointment|block|tomorrow|today|at \d/.test(lower)) type = "calendar";
 
-    artifacts.push(
-      {
-        type: "email",
-        task_id: "task-1",
-        to: "kartickey@company.com",
-        subject: "Apology: 10 AM Sync & Updated Pitch Deck",
-        body: "Hi Kartickey,\n\nI sincerely apologize for missing our 10 AM sync today as I totally overslept. I have attached the updated pitch deck as promised. Please let me know when you have some time to sync up.\n\nBest regards,\nUser"
-      },
-      {
-        type: "calendar",
-        task_id: "task-2",
-        title: "Deep Work Focus Block",
-        start_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + "T09:00:00",
-        duration_minutes: 120,
-        details: "Rescheduled focus block for core product design and deep work session."
-      },
-      {
-        type: "action",
-        task_id: "task-3",
-        action_label: "Pay Electricity Bill",
-        action_type: "payment",
-        content: "Amount: $150. Due soon.",
-        action_url: "https://utility-billpay.local/electricity"
-      }
-    );
+    const id = `task-${i + 1}`;
+    const title = chunk.charAt(0).toUpperCase() + chunk.slice(1);
+    const isDeferred = /tomorrow|tonight|later|after|next|on \w+ \d|\d+\s*(am|pm)/i.test(lower);
 
-    return {
-      tasks,
-      artifacts,
-      blockers,
-      steps,
-      rawText: "ResQ: 3 loops pre-built."
-    };
-  }
+    tasks.push({
+      id,
+      title,
+      type,
+      urgency: 5,
+      execution_mode: isDeferred ? "deferred" : "immediate",
+      scheduled_time: isDeferred ? new Date(Date.now() + 3600_000).toISOString() : null,
+      context: "",
+    });
 
-  // Scenario 2: CA call and GST filing
-  if (lowerText.includes("ca") || lowerText.includes("gst") || lowerText.includes("priya") || lowerText.includes("design review")) {
-    steps.push("draft_calendar_artifact", "draft_action_artifact");
-    
-    tasks.push(
-      {
-        id: "task-1",
-        title: "Call CA back regarding GST filing",
-        type: "calendar",
-        urgency: 8,
-        execution_mode: "deferred",
-        scheduled_time: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-        people: ["CA"],
-        context: "Follow up on pending GST filings after meetings"
-      },
-      {
-        id: "task-2",
-        title: "Message Priya regarding design review date shift",
-        type: "message",
-        urgency: 6,
-        execution_mode: "immediate",
-        people: ["Priya"],
-        context: "Inform Priya that design review is pushed to Thursday"
-      }
-    );
-
-    artifacts.push(
-      {
-        type: "calendar",
-        task_id: "task-1",
-        title: "Call CA - GST Filing",
-        start_time: new Date().toISOString().split('T')[0] + "T18:00:00",
-        duration_minutes: 15,
-        details: "Call the CA back to resolve pending GST file questions after general meeting block is cleared."
-      },
-      {
-        type: "action",
-        task_id: "task-2",
-        action_label: "Slack Priya",
-        action_type: "message",
-        content: "Hi Priya, the design review has been pushed to Thursday. Thanks!",
-        action_url: "slack://user?id=priya"
-      }
-    );
-
-    return {
-      tasks,
-      artifacts,
-      blockers,
-      steps,
-      rawText: "ResQ: 2 loops pre-built."
-    };
-  }
-
-  // Scenario 3: Send contract and follow up on invoice
-  if (lowerText.includes("contract") || lowerText.includes("invoice") || lowerText.includes("follow up on")) {
-    steps.push("draft_email_artifact", "draft_action_artifact");
-    
-    tasks.push(
-      {
-        id: "task-1",
-        title: "Send contract to the client",
-        type: "email",
-        urgency: 8,
-        execution_mode: "immediate",
-        context: "Delivery of client agreement contract"
-      },
-      {
-        id: "task-2",
-        title: "Follow up on outstanding invoice",
-        type: "payment",
-        urgency: 7,
-        execution_mode: "immediate",
-        context: "Invoice follow-up and reminder verification"
-      }
-    );
-
-    artifacts.push(
-      {
-        type: "email",
-        task_id: "task-1",
-        to: "client@example.com",
-        subject: "Contract Agreement for Signoff",
-        body: "Hello,\n\nPlease find attached the final version of the contract agreement for your review and signoff. Let me know if you have any questions.\n\nWarm regards,\nUser"
-      },
-      {
-        type: "action",
-        task_id: "task-2",
-        action_label: "Track Invoice",
-        action_type: "payment",
-        content: "Check invoice payment status and send standard email reminder.",
-        action_url: "https://accounting.local/invoices"
-      }
-    );
-
-    return {
-      tasks,
-      artifacts,
-      blockers,
-      steps,
-      rawText: "ResQ: 2 loops pre-built."
-    };
-  }
-
-  // General fallback parsing:
-  const sentences = text.split(/[.\n;]/).map(s => s.trim()).filter(Boolean);
-  let taskIdCounter = 1;
-
-  sentences.forEach((sentence) => {
-    const sLower = sentence.toLowerCase();
-    let parsedType: "email" | "calendar" | "payment" | "reminder" | "message" | null = null;
-    let urgency = 5;
-
-    if (sLower.includes("email") || sLower.includes("mail") || sLower.includes("send to") || sLower.includes("@")) {
-      parsedType = "email";
-      urgency = 7;
-    } else if (sLower.includes("meet") || sLower.includes("sync") || sLower.includes("schedule") || sLower.includes("calendar") || sLower.includes("call") || sLower.includes("zoom") || sLower.includes("appointment")) {
-      parsedType = "calendar";
-      urgency = 6;
-    } else if (sLower.includes("pay") || sLower.includes("bill") || sLower.includes("invoice") || sLower.includes("transfer") || sLower.includes("$") || sLower.includes("price") || sLower.includes("cost")) {
-      parsedType = "payment";
-      urgency = 6;
-    } else if (sLower.includes("message") || sLower.includes("whatsapp") || sLower.includes("slack") || sLower.includes("ping") || sLower.includes("text")) {
-      parsedType = "message";
-      urgency = 5;
-    } else if (sLower.includes("remind") || sLower.includes("remember") || sLower.includes("forget") || sLower.includes("todo") || sLower.includes("task")) {
-      parsedType = "reminder";
-      urgency = 4;
-    }
-
-    if (parsedType) {
-      const taskId = `task-gen-${taskIdCounter++}`;
-      let title = sentence;
-      title = title.replace(/^(need to|should|must|remember to|remind me to|please|i need to|i have to)\s+/i, "");
-      title = title.charAt(0).toUpperCase() + title.slice(1);
-
-      tasks.push({
-        id: taskId,
-        title,
-        type: parsedType,
-        urgency,
-        execution_mode: "immediate",
-        context: sentence
-      });
-
-      if (parsedType === "email") {
-        steps.push("draft_email_artifact");
-        const emailMatch = sentence.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-        const emailTo = emailMatch ? emailMatch[0] : "recipient@example.com";
-        artifacts.push({
-          type: "email",
-          task_id: taskId,
-          to: emailTo,
-          subject: title.length > 40 ? title.substring(0, 37) + "..." : title,
-          body: `Hi,\n\nRegarding: ${sentence}\n\nI wanted to reach out and follow up on this task. Let me know if there's anything needed from my end.\n\nBest regards,\nUser`
-        });
-      } else if (parsedType === "calendar") {
-        steps.push("draft_calendar_artifact");
-        artifacts.push({
-          type: "calendar",
-          task_id: taskId,
-          title,
-          start_time: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
-          duration_minutes: 30,
-          details: `Scheduled from brain-dump: "${sentence}"`
-        });
-      } else {
-        steps.push("draft_action_artifact");
-        artifacts.push({
-          type: "action",
-          task_id: taskId,
-          action_label: parsedType === "payment" ? "Process Payment" : parsedType === "message" ? "Send Message" : "View Reminder",
-          action_type: parsedType === "payment" ? "payment" : parsedType === "message" ? "message" : "reminder",
-          content: sentence,
-          action_url: parsedType === "payment" ? "https://payment-portal.local" : undefined
-        });
-      }
+    if (type === "email") {
+      steps.push("draft_email_artifact");
+      artifacts.push({ type: "email", task_id: id, to: "", subject: title, body: `${title}.` });
+    } else if (type === "calendar") {
+      steps.push("draft_calendar_artifact");
+      artifacts.push({ type: "calendar", task_id: id, title, start_time: new Date(Date.now() + 3600_000).toISOString(), duration_minutes: 30, details: chunk });
+    } else {
+      steps.push("draft_action_artifact");
+      const action_type = type === "payment" ? "payment" : type === "message" ? "message" : "reminder";
+      artifacts.push({ type: "action", task_id: id, action_label: title, action_type, content: chunk });
     }
   });
 
   if (tasks.length === 0) {
-    const taskId = `task-gen-1`;
-    tasks.push({
-      id: taskId,
-      title: text.length > 60 ? text.substring(0, 57) + "..." : text,
-      type: "reminder",
-      urgency: 5,
-      execution_mode: "immediate",
-      context: text
-    });
-    steps.push("draft_action_artifact");
-    artifacts.push({
-      type: "action",
-      task_id: taskId,
-      action_label: "Review Brain Dump",
-      action_type: "reminder",
-      content: text
-    });
+    return { steps, tasks: [], artifacts: [], blockers: [], rawText: "" };
   }
 
-  return {
-    tasks,
-    artifacts,
-    blockers,
-    steps,
-    rawText: `ResQ: ${tasks.length} loops pre-built.`
-  };
+  return { steps, tasks, artifacts, blockers, rawText: "" };
 }
 
 async function startServer() {

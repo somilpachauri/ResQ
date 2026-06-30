@@ -72,12 +72,6 @@ function useVoiceInput(onAppend: (finalChunk: string) => void) {
   return { listening, toggle };
 }
 
-const DEMO_INPUTS = [
-  "I overslept and missed my 10 AM sync with Kartickey. Need to apologize and send the updated pitch deck. Also push my deep work block to tomorrow morning, and remind me to pay the electricity bill.",
-  "Need to call my CA back about the GST filing but I'm in meetings until 6pm. Also message Priya that the design review is pushed to Thursday.",
-  "Send the contract to the client and follow up on the invoice.",
-];
-
 export default function App() {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -198,10 +192,10 @@ export default function App() {
       </header>
 
       {/* Body */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
 
         {/* Left — input */}
-        <section className="w-full md:w-1/2 h-1/2 md:h-full flex flex-col border-b md:border-b-0 md:border-r border-white/5">
+        <section className="w-full md:w-1/2 flex flex-col min-h-[40vh] md:h-full border-b md:border-b-0 md:border-r border-white/5">
           <div className="flex-1 flex flex-col px-6 pt-5 overflow-hidden">
             <label className="text-[15px] font-medium text-zinc-300 mb-1">What's on your mind?</label>
             <p className="text-[12px] text-zinc-600 mb-3">Type it, say it, or snap a photo of the chaos — a bill, a chat, a sticky note.</p>
@@ -235,19 +229,6 @@ export default function App() {
           <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageSelect} className="hidden" />
 
           <div className="px-6 py-4 border-t border-white/5 flex flex-col gap-3">
-            {/* Example chips */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[12px] text-zinc-600">Try:</span>
-              {DEMO_INPUTS.map((d, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setInput(d); clearImage(); }}
-                  className="text-[12px] text-zinc-400 hover:text-zinc-200 border border-white/8 hover:border-white/20 rounded-lg px-2.5 py-1 transition-colors"
-                >
-                  Example {i + 1}
-                </button>
-              ))}
-            </div>
 
             {/* Unified composer action bar — all inputs equal weight */}
             <div className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.08] rounded-2xl p-2 focus-within:border-white/20 transition-colors">
@@ -302,7 +283,7 @@ export default function App() {
         </section>
 
         {/* Right — actions */}
-        <section className="w-full md:w-1/2 h-1/2 md:h-full">
+        <section className="w-full md:w-1/2 flex-1 md:h-full">
           <ActionZone
             tasks={tasks}
             artifacts={artifacts}

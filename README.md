@@ -4,7 +4,7 @@
 
 ResQ is an AI productivity companion that takes a chaotic brain-dump — typed, spoken, or **photographed** — and turns it into ready-to-execute action cards. Not reminders. Not a to-do list. The actual email, drafted. The calendar event, pre-filled. The payment, one tap away.
 
-**Live demo:** [your-cloud-run-url] · **Built for:** Vibe2Ship (Coding Ninjas × Google for Developers)
+**Live demo:** https://resq-555950899487.asia-southeast1.run.app/ · **Built for:** Vibe2Ship (Coding Ninjas × Google for Developers)
 
 ---
 
@@ -130,7 +130,3 @@ gcloud run deploy resq \
 - Native Android app
 
 ---
-
-## License
-
-MIT

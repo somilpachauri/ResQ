@@ -48,6 +48,12 @@ export default function ExecuteCard({ task, artifact, onComplete, index = 0 }: E
   else if (artifact?.type === "action") preview = artifact.content;
 
   const handleExecute = () => {
+    if (done) {
+      // If it's already done, reset the visual state
+      setDone(false);
+      return;
+    }
+
     if (deepLink) window.open(deepLink, "_blank");
     else if (preview) {
       navigator.clipboard?.writeText(preview);
